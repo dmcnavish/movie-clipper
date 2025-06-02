@@ -32,12 +32,20 @@ pip install scenedetect
 # Install Node.js deps
 npm install
 
+# To run
+node index.js movies.json
+
+# For fast testing
+node index.js movies.json --scale=360:640 --max-scenes=2 --mock
+
 
 CLI options
 Option	Description
 --mock	Use mock static response (no API calls)
 --no-subs	Disable subtitles in output clips
 --max-scenes=N	Limit number of scenes to generate (default: 4)
+--scale=WIDTH:HEIGHT Set output resolution (default: 1080:1920). Lower for faster test clips. |
+
 
 🧪 Mock mode (for testing without API calls)
 

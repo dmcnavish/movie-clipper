@@ -17,6 +17,9 @@ const NO_SUBS = process.argv.includes('--no-subs');
 const USE_MOCK = process.argv.includes('--mock');
 const maxScenesArg = process.argv.find(arg => arg.startsWith('--max-scenes='));
 const MAX_SCENES = maxScenesArg ? parseInt(maxScenesArg.split('=')[1], 10) : 4;
+const scaleArg = process.argv.find(arg => arg.startsWith('--scale='));
+const SCALE = scaleArg ? scaleArg.split('=')[1] : '1080:1920';
+
 
 if (!OPENAI_API_KEY) {
   console.error('Missing OpenAI API Key. Set OPENAI_API_KEY in environment variables.');
@@ -63,20 +66,36 @@ async function getPopularScenes(title, useMock = false) {
   }
 }
 
-async function detectScenes(filePath) {
-  const baseName = path.basename(filePath, path.extname(filePath));
-  const outputDir = `${baseName}_Scenes`;
+// async function detectScenes(filePath) {
+//   const baseName = path.basename(filePath, path.extname(filePath));
+//   const outputDir = `${baseName}_Scenes`;
 
-  const command = `scenedetect --input "${filePath}" detect-content list-scenes --output "${outputDir}"`;
-  await execAsync(command);
+//   const command = `scenedetect --input "${filePath}" detect-content list-scenes --output "${outputDir}"`;
+//   await execAsync(command);
 
-  // The actual CSV file is named: <basename>-Scenes.csv inside the output dir
-  const sceneCsvPath = path.join(outputDir, `${baseName}-Scenes.csv`);
+//   // The actual CSV file is named: <basename>-Scenes.csv inside the output dir
+//   const sceneCsvPath = path.join(outputDir, `${baseName}-Scenes.csv`);
 
-  console.log(`Scene CSV generated at: ${sceneCsvPath}`);
+//   console.log(`Scene CSV generated at: ${sceneCsvPath}`);
 
-  return sceneCsvPath;
+//   return sceneCsvPath;
+// }
+
+function parseGptScenes(scenesText) {
+  const sceneRegex = /(\d{1,2}:\d{2}:\d{2})\s*-\s*(\d{1,2}:\d{2}:\d{2})/g;
+
+  const scenes = [];
+  let match;
+
+  while ((match = sceneRegex.exec(scenesText)) !== null) {
+    const start = match[1];
+    const end = match[2];
+    scenes.push({ start, end });
+  }
+
+  return scenes;
 }
+
 
 async function findSubtitle(filePath) {
   const movieDir = path.dirname(filePath);
@@ -112,8 +131,8 @@ async function clipScene(filePath, startTime, endTime, outputName, subtitleInfo)
       subFilter = `,subtitles='${filePath}':si=${subtitleInfo.streamIndex}`;
     }
   }
-
-  const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=1080:1920${subFilter}" -c:a copy "${OUTPUT_DIR}/${outputName}"`;
+  const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=${SCALE}${subFilter}" -c:a copy "${OUTPUT_DIR}/${outputName}"`;
+  // const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=1080:1920${subFilter}" -c:a copy "${OUTPUT_DIR}/${outputName}"`;
   console.log(`clipScene command: ${command}`);
   await execAsync(command);
 
@@ -136,23 +155,21 @@ async function main() {
   for (const movie of movies) {
     console.log(`\nProcessing: ${movie.title}`);
 
-    // 1. Get popular scenes from ChatGPT
+    // 1️⃣ Get popular scenes from ChatGPT (or mock)
     const scenesDescription = await getPopularScenes(movie.title, USE_MOCK);
-    console.log(`Popular Scenes:\n${scenesDescription}`);
+    console.log(`\nPopular Scenes:\n${scenesDescription}\n`);
 
-    // 2. Detect scenes using PySceneDetect
-    const sceneFile = await detectScenes(movie.file_path);
+    // 2️⃣ Parse GPT timestamps
+    const gptScenes = parseGptScenes(scenesDescription);
 
-    // 3. Match scenes
-    const matchedScenes = await matchScenes(sceneFile, scenesDescription);
+    console.log(`Parsed ${gptScenes.length} scenes from GPT...`);
 
-    // 4. Detect subtitles (once per movie)
+    // 3️⃣ Detect subtitles (once per movie)
     const subtitleInfo = await findSubtitle(movie.file_path);
 
-    // 5. Clip matched scenes
-    // for (const [index, scene] of matchedScenes.entries()) {
-    // Clip only up to MAX_SCENES
-    const limitedScenes = matchedScenes.slice(0, MAX_SCENES);
+    // 4️⃣ Clip only up to MAX_SCENES
+    const limitedScenes = gptScenes.slice(0, MAX_SCENES);
+
     console.log(`Clipping up to ${limitedScenes.length} scenes (max: ${MAX_SCENES})...`);
 
     for (const [index, scene] of limitedScenes.entries()) {
@@ -166,6 +183,7 @@ async function main() {
 
   progress.stop();
 }
+
 
 main().catch(err => {
   console.error(err);
