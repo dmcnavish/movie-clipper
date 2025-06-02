@@ -1,0 +1,8 @@
+# Python venv
+venv/
+scenes/
+
+# Node modules (if you add any frontend tools later)
+node_modules/
+
+movies/

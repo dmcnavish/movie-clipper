@@ -1,0 +1,61 @@
+# 🎬 Movie Clipper — TikTok Scene Generator
+
+CLI tool to:
+✅ Read list of movies  
+✅ Ask ChatGPT for popular scenes  
+✅ Auto-detect actual scenes with PySceneDetect  
+✅ Clip and burn subtitles (default ON)  
+✅ Output vertical 1080x1920 clips for TikTok  
+
+---
+
+## ⚙️ Setup (Mac)
+
+### 1️⃣ Install dependencies
+
+```bash
+# Install ffmpeg
+brew install ffmpeg
+
+# Install Python and PySceneDetect
+brew install python
+
+# Create virtual environment
+python3 -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Install PySceneDetect
+pip install scenedetect
+
+# Install Node.js deps
+npm install
+
+
+CLI options
+Option	Description
+--mock	Use mock static response (no API calls)
+--no-subs	Disable subtitles in output clips
+--max-scenes=N	Limit number of scenes to generate (default: 4)
+
+🧪 Mock mode (for testing without API calls)
+
+You can run movie-clipper in mock mode to test the entire pipeline without making requests to OpenAI.
+
+This is useful for:
+✅ Testing clipping logic
+✅ Testing scene detection
+✅ Avoiding API costs during development
+🚀 How to run in mock mode
+
+source venv/bin/activate
+node index.js movies.json --mock
+
+What happens:
+
+    The program will return a static example response for getPopularScenes().
+
+    No API calls will be made.
+
+    The rest of the program runs as normal — scene detection, clipping, etc.
