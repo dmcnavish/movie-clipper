@@ -119,8 +119,18 @@ async function findSubtitle(filePath) {
 }
 
 async function clipScene(filePath, startTime, endTime, outputName, subtitleInfo) {
-  console.log(`\n[clipScene] Starting clip: ${outputName} `);
+  console.log(`\n[clipScene] Starting clip: ${outputName}`);
   const startTimestamp = Date.now();
+
+  // Ensure output filename is unique
+  let finalOutputName = outputName;
+  const outputPath = path.join(OUTPUT_DIR, finalOutputName);
+
+  if (fs.existsSync(outputPath)) {
+    const timestamp = Date.now();
+    finalOutputName = outputName.replace(/\.mp4$/, `_${timestamp}.mp4`);
+    console.log(`[clipScene] Output file exists, using new name: ${finalOutputName}`);
+  }
 
   let subFilter = '';
 
@@ -131,16 +141,17 @@ async function clipScene(filePath, startTime, endTime, outputName, subtitleInfo)
       subFilter = `,subtitles='${filePath}':si=${subtitleInfo.streamIndex}`;
     }
   }
-  const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=${SCALE}${subFilter}" -c:a copy "${OUTPUT_DIR}/${outputName}"`;
-  // const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=1080:1920${subFilter}" -c:a copy "${OUTPUT_DIR}/${outputName}"`;
-  console.log(`clipScene command: ${command}`);
+
+  const command = `ffmpeg -i "${filePath}" -ss ${startTime} -to ${endTime} -vf "crop=(iw/3):(ih):(iw/3):(0),scale=${SCALE}${subFilter}" -c:a copy "${OUTPUT_DIR}/${finalOutputName}"`;
+
   await execAsync(command);
 
   const endTimestamp = Date.now();
   const durationSec = ((endTimestamp - startTimestamp) / 1000).toFixed(2);
 
-  console.log(`[clipScene] Finished clip: ${outputName} in ${durationSec} seconds\n`);
+  console.log(`[clipScene] Finished clip: ${finalOutputName} in ${durationSec} seconds\n`);
 }
+
 
 async function main() {
   if (!fs.existsSync(OUTPUT_DIR)) {
