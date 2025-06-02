@@ -1,11 +1,14 @@
+````markdown
 # 🎬 Movie Clipper — TikTok Scene Generator
 
 CLI tool to:
 ✅ Read list of movies  
-✅ Ask ChatGPT for popular scenes  
-✅ Auto-detect actual scenes with PySceneDetect  
-✅ Clip and burn subtitles (default ON)  
-✅ Output vertical 1080x1920 clips for TikTok  
+✅ Ask ChatGPT for popular scenes (via `/v1/responses` API)  
+✅ Parse GPT scene timestamps  
+✅ Clip scenes directly from GPT timestamps  
+✅ Burn subtitles (optional, ON by default)  
+✅ Output vertical 1080x1920 (or custom scale) clips for TikTok  
+✅ Keeps previous runs safe by using unique filenames 🚀
 
 ---
 
@@ -17,53 +20,238 @@ CLI tool to:
 # Install ffmpeg
 brew install ffmpeg
 
-# Install Python and PySceneDetect
+# Install Python 3 (if not already installed)
 brew install python
 
-# Create virtual environment
+# Install Node.js dependencies
+npm install
+````
+
+---
+
+## 🔑 Set OpenAI API Key
+
+This project now uses the **`/v1/responses` API**, which requires a **project key** (`sk-proj-xxx`).
+
+```bash
+export OPENAI_API_KEY=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+---
+
+## 🐍 Python Virtual Environment (venv) — Recommended
+
+It is strongly recommended to use a Python virtual environment for this project, to avoid system Python conflicts and to comply with latest Homebrew Python best practices (PEP 668).
+
+---
+
+### ⚙️ How to set up venv (one-time setup)
+
+```bash
+# 1️⃣ Create virtual environment
 python3 -m venv venv
 
-# Activate the virtual environment
+# 2️⃣ Activate the virtual environment
 source venv/bin/activate
 
-# Install PySceneDetect
+# 3️⃣ Install PySceneDetect
 pip install scenedetect
+```
 
-# Install Node.js deps
-npm install
+---
 
-# To run
+### 🚀 How to activate venv each time you want to run movie-clipper
+
+```bash
+cd ~/Development/workspace/js/movie-clipper
+source venv/bin/activate
 node index.js movies.json
+```
 
-# For fast testing
-node index.js movies.json --scale=360:640 --max-scenes=2 --mock
+---
 
+### 💤 How to deactivate venv
 
-CLI options
-Option	Description
---mock	Use mock static response (no API calls)
---no-subs	Disable subtitles in output clips
---max-scenes=N	Limit number of scenes to generate (default: 4)
---scale=WIDTH:HEIGHT Set output resolution (default: 1080:1920). Lower for faster test clips. |
+```bash
+deactivate
+```
 
+---
 
-🧪 Mock mode (for testing without API calls)
+### 📅 When do you need to activate it?
 
-You can run movie-clipper in mock mode to test the entire pipeline without making requests to OpenAI.
+| Situation                             | Do you need to activate venv? |
+| ------------------------------------- | ----------------------------- |
+| Running movie-clipper                 | ✅ Yes — activate venv first   |
+| Opened a new terminal window          | ✅ Yes — activate venv again   |
+| Just using Node.js (other JS project) | ❌ No — no venv needed         |
+| Switching to other Python project     | Optional — deactivate first   |
 
-This is useful for:
-✅ Testing clipping logic
-✅ Testing scene detection
-✅ Avoiding API costs during development
-🚀 How to run in mock mode
+---
 
+### 🐍 Why use venv?
+
+✅ Keeps the Python environment isolated
+✅ Avoids conflicts with system Python
+✅ Works with latest Homebrew Python (which uses PEP 668 "externally managed")
+✅ Ensures that `movie-clipper` always runs cleanly across Macs, Node versions, Python versions
+
+---
+
+### 📂 Folder Structure
+
+```
+movie-clipper/
+├── index.js
+├── package.json
+├── movies.json
+├── README.md
+├── utils/
+│   └── sceneHelpers.js
+├── scenes/        (output clips go here)
+├── movies/        (put movie files here)
+└── venv/          (your local Python venv)
+```
+
+---
+
+### 📝 Example `.gitignore`
+
+```gitignore
+# Python venv
+venv/
+
+# Node modules (if you add any frontend tools later)
+node_modules/
+
+# Output clips
+scenes/
+```
+
+---
+
+## 🚀 Run movie-clipper
+
+### Default (calls OpenAI `/v1/responses` API, full scale 1080x1920)
+
+```bash
+source venv/bin/activate
+node index.js movies.json
+```
+
+---
+
+### Disable subtitles
+
+```bash
+source venv/bin/activate
+node index.js movies.json --no-subs
+```
+
+---
+
+### Limit number of scenes (default is 4)
+
+```bash
+source venv/bin/activate
+node index.js movies.json --max-scenes=2
+```
+
+---
+
+### Set custom scale (for faster testing)
+
+```bash
+source venv/bin/activate
+node index.js movies.json --scale=540:960
+```
+
+Super fast debug:
+
+```bash
+source venv/bin/activate
+node index.js movies.json --scale=360:640
+```
+
+---
+
+### Run in mock mode (no API calls, static scenes)
+
+```bash
 source venv/bin/activate
 node index.js movies.json --mock
+```
 
-What happens:
+---
 
-    The program will return a static example response for getPopularScenes().
+### Combine options
 
-    No API calls will be made.
+```bash
+source venv/bin/activate
+node index.js movies.json --mock --max-scenes=2 --scale=360:640 --no-subs
+```
 
-    The rest of the program runs as normal — scene detection, clipping, etc.
+---
+
+### 🚀 Explanation of CLI options
+
+| Option                 | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `--mock`               | Use mock static response (no API calls)                                  |
+| `--no-subs`            | Disable subtitles in output clips                                        |
+| `--max-scenes=N`       | Limit number of scenes to generate (default: 4)                          |
+| `--scale=WIDTH:HEIGHT` | Set output resolution (default: 1080:1920). Lower for faster test clips. |
+
+---
+
+## ✅ Example `movies.json`
+
+```json
+[
+  {
+    "title": "Night of the Living Dead",
+    "version": "Original",
+    "frame_rate": "24",
+    "file_path": "./movies/night_of_the_living_dead.mp4"
+  }
+]
+```
+
+---
+
+## 🚀 How it works
+
+1️⃣ Calls `/v1/responses` with your movie title → gets popular scenes with timestamps
+2️⃣ Parses GPT timestamps
+3️⃣ Calls `clipScene()` directly — no PySceneDetect needed
+4️⃣ Outputs vertical video clips to `scenes/`
+
+---
+
+## 🚀 Output Files — Naming
+
+✅ If a clip with the same name already exists, the program will automatically add a **timestamp** to the filename to ensure uniqueness.
+
+Example:
+
+```text
+House_on_Haunted_Hill_Scene1.mp4
+House_on_Haunted_Hill_Scene1_1717194859123.mp4
+```
+
+✅ This prevents ffmpeg hangs and allows you to test multiple variations without losing previous clips.
+
+---
+
+## Notes
+
+* Uses new `/v1/responses` API with project key (`sk-proj-xxx`)
+* Now clips scenes directly from GPT timestamps — no PySceneDetect needed
+* `--mock` mode allows fast testing with static data
+* `--scale` option allows fast generation at lower resolution
+* Output clips are safe from overwrites (timestamped if needed)
+* Great for TikTok / Shorts automation 🚀
+
+---
+
+**Enjoy — and post some awesome clips!** 😎

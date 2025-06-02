@@ -66,21 +66,6 @@ async function getPopularScenes(title, useMock = false) {
   }
 }
 
-// async function detectScenes(filePath) {
-//   const baseName = path.basename(filePath, path.extname(filePath));
-//   const outputDir = `${baseName}_Scenes`;
-
-//   const command = `scenedetect --input "${filePath}" detect-content list-scenes --output "${outputDir}"`;
-//   await execAsync(command);
-
-//   // The actual CSV file is named: <basename>-Scenes.csv inside the output dir
-//   const sceneCsvPath = path.join(outputDir, `${baseName}-Scenes.csv`);
-
-//   console.log(`Scene CSV generated at: ${sceneCsvPath}`);
-
-//   return sceneCsvPath;
-// }
-
 function parseGptScenes(scenesText) {
   const sceneRegex = /(\d{1,2}:\d{2}:\d{2})\s*-\s*(\d{1,2}:\d{2}:\d{2})/g;
 
