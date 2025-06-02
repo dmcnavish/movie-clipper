@@ -1,8 +1,10 @@
 # Python venv
 venv/
-/scenes
+scenes/*
+!scenes/.gitkeep
 
 # Node modules (if you add any frontend tools later)
 node_modules/
 
-/movies
+movies/*
+!movies/.gitkeep
