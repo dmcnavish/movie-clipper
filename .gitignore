@@ -1,7 +1,6 @@
 # Python venv
 venv/
-scenes/*
-!scenes/.gitkeep
+clips/
 
 # Node modules (if you add any frontend tools later)
 node_modules/

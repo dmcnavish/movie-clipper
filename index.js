@@ -22,6 +22,7 @@ async function main() {
 
   if (action === 'download-movie' || action === 'all') {
     updatedMovies = await downloadMovies(movieJsonPath);
+    console.log("after download updatedMovies: ", updatedMovies)
   }
 
   if (action === 'clip-movie' || action === 'all') {
@@ -34,7 +35,7 @@ async function main() {
       console.log('🎞️  No updated paths — using movies.json.');
       moviesToClip = JSON.parse(fs.readFileSync(movieJsonPath, 'utf-8'));
     }
-
+    console.log("moviesToClip", moviesToClip)
     await clipMovies(moviesToClip, { maxScenes, scale, skipChatgpt });
   }
 }

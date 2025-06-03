@@ -59,29 +59,71 @@ async function qbTorrentsAdd(magnet, savepath) {
   );
 }
 
+function extractMagnetHash(magnet) {
+  const match = magnet.match(/urn:btih:([a-fA-F0-9]+)/);
+  return match ? match[1].toLowerCase() : null;
+}
+
 async function waitForTorrentComplete(magnet, movieTitle) {
+  const magnetHash = extractMagnetHash(magnet);
+
+  if (!magnetHash) {
+    console.log(`❌ Could not extract hash from magnet for "${movieTitle}" — skipping.`);
+    return null;
+  }
+
+  console.log(`⏳ Waiting for torrent "${movieTitle}" (hash=${magnetHash}) to appear in qBittorrent...`);
+
+  let torrent = null;
+  let retries = 0;
+  const maxRetries = 10; // ~10 * 3s = ~30 seconds
+
+  // First loop: Wait for torrent to appear
+  while (retries < maxRetries) {
+    const torrents = await qbTorrentsInfo();
+
+    // Debug — show all torrent hashes:
+    // torrents.forEach(t => console.log(`DEBUG: ${t.name} | hash=${t.hash}`));
+
+    torrent = torrents.find(t => t.hash === magnetHash);
+
+    if (torrent) {
+      console.log(`✅ Torrent found for "${movieTitle}": "${torrent.name}"`);
+      break;
+    }
+
+    retries++;
+    console.log(`⏳ Waiting... (${retries}/${maxRetries})`);
+    await sleep(3000); // Wait 3 seconds
+  }
+
+  if (!torrent) {
+    console.log(`❌ Torrent did not appear for "${movieTitle}" after waiting — skipping.`);
+    return null;
+  }
+
+  // Second loop: Wait for download to complete
   console.log(`⏳ Waiting for download of "${movieTitle}" to complete...`);
 
   let done = false;
-  let torrent = null;
 
   while (!done) {
     const torrents = await qbTorrentsInfo();
-    torrent = torrents.find(t => t.magnet_uri === magnet);
+    torrent = torrents.find(t => t.hash === magnetHash);
 
     if (!torrent) {
-      console.log(`⚠️ Torrent not found for "${movieTitle}", skipping.`);
+      console.log(`⚠️ Torrent disappeared for "${movieTitle}" — skipping.`);
       break;
     }
 
     const progress = (torrent.progress * 100).toFixed(1);
     console.log(`📊 ${movieTitle}: ${progress}% [${torrent.state}]`);
 
-    if (torrent.state === 'uploading' || torrent.state === 'stalledUP' || torrent.progress === 1) {
+    if (torrent.state === 'uploading' || torrent.state === 'stalledUP' ||  torrent.state === 'seeding' || torrent.progress === 1) {
       console.log(`✅ Download complete for "${movieTitle}"`);
       done = true;
     } else {
-      await sleep(30000); // Wait 30 sec
+      await sleep(30000); // Wait 30 seconds
     }
   }
 

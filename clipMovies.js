@@ -1,49 +1,77 @@
 const fs = require('fs');
-const cliProgress = require('cli-progress');
+const path = require('path');
 const { 
   getPopularScenes,
   parseGptScenes,
   findSubtitle,
-  clipScene } = require('./utils/sceneHelpers');
+  clipScene 
+} = require('./utils/sceneHelpers');
 
-const USE_MOCK = process.argv.includes('--mock');
+async function clipMovies(moviesInput, options = {}) {
+  const { maxScenes, scale, skipChatgpt } = options;
 
-const maxScenesArg = process.argv.find(arg => arg.startsWith('--max-scenes='));
-const MAX_SCENES = maxScenesArg ? parseInt(maxScenesArg.split('=')[1], 10) : 4;
+  let movies = [];
 
-async function clipMovies(movieJsonPath) {
-  console.log(`\n🎬 Clipping movies from ${movieJsonPath}`);
-
-  const movies = JSON.parse(fs.readFileSync(movieJsonPath, 'utf-8'));
-
-  const progress = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-  progress.start(movies.length, 0);
-
-  for (const movie of movies) {
-    console.log(`\nProcessing: ${movie.title}`);
-
-    const scenesDescription = await getPopularScenes(movie.title, USE_MOCK);
-    console.log(`\nPopular Scenes:\n${scenesDescription}\n`);
-
-    const gptScenes = parseGptScenes(scenesDescription);
-    console.log(`Parsed ${gptScenes.length} scenes from GPT...`);
-
-    const subtitleInfo = await findSubtitle(movie.file_path);
-
-    const limitedScenes = gptScenes.slice(0, MAX_SCENES);
-
-    console.log(`Clipping up to ${limitedScenes.length} scenes (max: ${MAX_SCENES})...`);
-
-    for (const [index, scene] of limitedScenes.entries()) {
-      const outputName = `${movie.title.replace(/\s+/g, '_')}_Scene${index + 1}.mp4`;
-      await clipScene(movie.file_path, scene.start, scene.end, outputName, subtitleInfo);
-      console.log(`Saved clip: ${outputName}`);
-    }
-
-    progress.increment();
+  if (Array.isArray(moviesInput)) {
+    console.log('🎞️  clipMovies received movies array.');
+    movies = moviesInput;
+  } else if (typeof moviesInput === 'string') {
+    console.log(`🎞️  clipMovies loading from file: ${moviesInput}`);
+    movies = JSON.parse(fs.readFileSync(moviesInput, 'utf-8'));
+  } else {
+    throw new Error('Invalid movies input — must be array or path to JSON file.');
   }
 
-  progress.stop();
+  for (const movie of movies) {
+    console.log(`\n🎞️  Processing "${movie.title}"...`);
+
+    const moviePath = movie.file_path;
+    if (!moviePath || !fs.existsSync(moviePath)) {
+      console.log(`⚠️ Movie file not found: ${moviePath}`);
+      continue;
+    }
+
+    const subtitlePath = findSubtitle(moviePath);
+
+    const gptResponse = await getPopularScenes(movie.title, skipChatgpt);
+    const gptScenes = parseGptScenes(gptResponse);
+
+    console.log(`🎬 Found ${gptScenes.length} scenes. maxScenes: ${maxScenes} scale: ${scale}`);
+
+    const scenesToClip = (typeof maxScenes === 'number')
+      ? gptScenes.slice(0, maxScenes)
+      : gptScenes;
+
+    console.log(`🎬 Clipping ${scenesToClip.length} scenes.`);
+
+    const safeTitle = movie.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    const outputDir = path.join('./clips', safeTitle);
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    let sceneIndex = 1;
+    for (const scene of scenesToClip) {
+      const outputName = path.join(outputDir, `${safeTitle}_scene${sceneIndex}.mp4`);
+
+      console.log(`🎬 Clipping scene ${sceneIndex}: ${scene.start} - ${scene.end}`);
+
+      const startTime = Date.now();
+
+      await clipScene({
+        moviePath,
+        subtitlePath,
+        scene,
+        outputName,
+        scale
+      });
+
+      const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ Scene saved: ${outputName} (${durationSec} sec)`);
+
+      sceneIndex++;
+    }
+  }
+
+  console.log(`\n✅ All clipping complete.`);
 }
 
 module.exports = { clipMovies };

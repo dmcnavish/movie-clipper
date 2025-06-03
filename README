@@ -102,7 +102,7 @@ node index.js --action=all
 | `--mock`               | Use mock static response (no API calls)         |
 | `--no-subs`            | Disable subtitles in output clips               |
 | `--max-scenes=N`       | Limit number of scenes to generate (default: 4) |
-| `--scale=WIDTH:HEIGHT` | Set output resolution (default: 1080:1920)      |
+| `--scale=WIDTH:HEIGHT` | Set output resolution (default: 1080x1920)      |
 
 ---
 
@@ -110,7 +110,7 @@ node index.js --action=all
 
 ```bash
 source venv/bin/activate
-node index.js --action=all --mock --max-scenes=2 --scale=540:960 --no-subs
+node index.js --action=all --mock --max-scenes=2 --scale=540x960 --no-subs
 ```
 
 ---
