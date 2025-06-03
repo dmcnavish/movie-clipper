@@ -55,7 +55,7 @@ Popular Scenes:
     );
 
     const output = response.data.choices[0].message.content;
-    console.log(`✅ GPT scenes response received.`);
+    console.log(`✅ GPT scenes response received.`, output);
     return output;
 
   } catch (err) {

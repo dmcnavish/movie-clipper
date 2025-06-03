@@ -1,5 +1,5 @@
 ```markdown
-# 🎬 Movie Clipper — TikTok Scene Generator
+# 🎬 Movie Clipper
 
 CLI tool to:
 ✅ Programmatically download movies via torrents  
@@ -7,7 +7,7 @@ CLI tool to:
 ✅ Parse GPT scene timestamps  
 ✅ Clip scenes directly from GPT timestamps  
 ✅ Burn subtitles (optional, ON by default)  
-✅ Output vertical 1080x1920 (or custom scale) clips for TikTok  
+✅ Output vertical 1080x1920 (or custom scale) clips
 ✅ Keeps previous runs safe by using unique filenames 🚀
 
 ---
@@ -36,7 +36,7 @@ Available actions:
 
 ### 1️⃣ Install dependencies
 
-```bash
+bash
 # Install ffmpeg
 brew install ffmpeg
 
