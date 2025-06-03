@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
+const { generateSubtitlesWithWhisper } = require('./whisperHelpers');
+const { getCachedScenes, saveScenesToCache } = require('./cacheScenes');
 
 async function getPopularScenes(title, skipChatgpt = false) {
   if (skipChatgpt) {
@@ -10,6 +12,13 @@ async function getPopularScenes(title, skipChatgpt = false) {
       { start: '00:05:00', end: '00:07:30' },
       { start: '00:10:00', end: '00:12:00' }
     ];
+  }
+
+  // Check cache first
+  const cached = getCachedScenes(title);
+  if (cached) {
+    console.log(`✅ Loaded cached scenes for "${title}" from DB`);
+    return cached;
   }
 
   console.log(`🤖 Requesting popular scenes for "${title}" from ChatGPT...`);
@@ -54,9 +63,12 @@ Popular Scenes:
       }
     );
 
-    const output = response.data.choices[0].message.content;
-    console.log(`✅ GPT scenes response received.`, output);
-    return output;
+    const gptResponse = response.data.choices[0].message.content;
+
+    console.log(`✅ GPT scenes response received — saving to cache.`);
+    saveScenesToCache(title, gptResponse);
+
+    return gptResponse;
 
   } catch (err) {
     console.error(`❌ Error from OpenAI:`, err.response ? err.response.data : err.message);
@@ -103,25 +115,49 @@ function findSubtitle(moviePath) {
 }
 
 async function clipScene({ moviePath, subtitlePath, scene, outputName, scale }) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let command = ffmpeg(moviePath)
       .setStartTime(scene.start)
       .setDuration(calculateDuration(scene.start, scene.end))
       .output(outputName);
 
-    if (subtitlePath) {
+    if (scale) {
+      const normalizedScale = scale.replace(':', 'x');
+      command = command.size(normalizedScale);
+    }
+
+    // --- Subtitle handling ---
+    let finalSubtitlePath = subtitlePath;
+
+    if (!finalSubtitlePath) {
+      console.log(`⚠️ No subtitles found — generating with Whisper for: ${outputName}`);
+      try {
+        finalSubtitlePath = await generateSubtitlesWithWhisper(outputName);
+        if (finalSubtitlePath) {
+          console.log(`✅ Whisper subtitles ready: ${finalSubtitlePath}`);
+        } else {
+          console.log(`⚠️ Whisper subtitles failed — proceeding without captions.`);
+        }
+      } catch (err) {
+        console.log(`❌ Whisper generation error — proceeding without captions.`, err.message);
+      }
+    }
+
+    if (finalSubtitlePath) {
       command = command.outputOptions([
-        `-vf subtitles=${subtitlePath.replace(/:/g, '\\:')}`
+        `-vf subtitles=${finalSubtitlePath.replace(/:/g, '\\:')}`
       ]);
     }
 
-    if (scale) {
-      command = command.size(scale);
-    }
-
+    // --- Run command ---
     command
-      .on('end', () => resolve())
-      .on('error', (err) => reject(err))
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        console.error(`❌ Error in clipScene() for ${outputName}:`, err.message);
+        reject(err);
+      })
       .run();
   });
 }
