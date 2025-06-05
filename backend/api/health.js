@@ -1,7 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const db = require('../services/dbService');
+const db = require('../services/db');
+const { isWebSocketRunning } = require('../websockets/statusPublisher');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get('/', (req, res) => {
     api: 'online',
     db: dbStatus,
     clipsFolder: clipsExists ? 'exists' : 'missing',
-    websocket: 'online (check StatusBar to verify live)',
+    websocket: isWebSocketRunning ? 'online' : 'offline',
     version: '1.0.0'
   });
 });

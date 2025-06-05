@@ -1,11 +1,31 @@
-const { wss } = require('../app');
+const WebSocket = require('ws');
 
-function broadcast(payload) {
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(payload));
+let wss;
+let isWebSocketRunning = false;
+
+function createStatusWebSocketServer(server) {
+  wss = new WebSocket.Server({ server, path: '/ws/status' });
+
+  isWebSocketRunning = true;
+
+  wss.on('connection', (ws) => {
+    console.log('✅ WebSocket client connected');
+    ws.send(JSON.stringify({ type: 'info', message: 'WebSocket connected' }));
+
+    ws.on('close', () => {
+      console.log('❌ WebSocket client disconnected');
+    });
+  });
+}
+
+function broadcast(message) {
+  if (!wss) return;
+
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
     }
   });
 }
 
-module.exports = { broadcast };
+module.exports = { createStatusWebSocketServer, broadcast, isWebSocketRunning };

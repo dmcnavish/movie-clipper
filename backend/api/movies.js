@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
 
     res.json({ success: true, movie });
   } catch (err) {
-    console.error('❌ Error in POST /api/movies:', err.message);
+    console.error('❌ Error in POST /api/movies:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

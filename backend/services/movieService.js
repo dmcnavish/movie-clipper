@@ -1,5 +1,6 @@
 const db = require('./db');
-const { wss } = require('../app');
+// const { wss } = require('../app');
+const { broadcast } = require('../websockets/statusPublisher');
 
 // Add movie to queue
 function addMovieToQueue(title, magnet, params) {
@@ -12,7 +13,8 @@ function addMovieToQueue(title, magnet, params) {
   const movie = { id: info.lastInsertRowid, title, magnet, params, status: 'pending' };
 
   // Notify via WebSocket
-  broadcastStatus({ type: 'new_movie', movie });
+  // broadcastStatus({ type: 'new_movie', movie });
+  broadcast({ type: 'status', message: `Processing new movie ${movie}` });
 
   return movie;
 }
@@ -32,14 +34,14 @@ function getAllMovies() {
   }));
 }
 
-// WebSocket broadcast helper
-function broadcastStatus(payload) {
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(payload));
-    }
-  });
-}
+// // WebSocket broadcast helper
+// function broadcastStatus(payload) {
+//   wss.clients.forEach(client => {
+//     if (client.readyState === 1) {
+//       client.send(JSON.stringify(payload));
+//     }
+//   });
+// }
 
 module.exports = {
   addMovieToQueue,

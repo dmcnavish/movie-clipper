@@ -57,7 +57,7 @@ async function processMovieQueue() {
       broadcast({ type: 'status', message: `Completed: ${movie.title}` });
 
     } catch (err) {
-      console.error(`❌ Error processing ${movie.title}:`, err.message);
+      console.error(`❌ Error processing ${movie.title}:`, err);
 
       db.prepare(`
         UPDATE movies SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?
