@@ -1,28 +1,34 @@
-// downloadService.js
+const downloadMovies = require('../cli/downloadMovies');
+const { broadcast } = require('../websockets/statusPublisher');
 
-const { downloadMovies } = require('../../downloadMovies');
+async function downloadMovie(movie, params = {}) {
+  try {
+    broadcast({
+      type: 'status',
+      message: `⬇️ Downloading "${movie.title}"...`,
+    });
 
-async function downloadMovie(movie, broadcast) {
-  console.log(`⬇️ Downloading real movie: ${movie.title}`);
+    const contentPath = await downloadMovies(movie);
 
-  // Use your real existing function:
-  const moviesToDownload = [
-    {
-      title: movie.title,
-      magnet: movie.magnet,
-      file_path: '' // optional — let your logic handle it
+    if (!contentPath) {
+      throw new Error(`Download failed or content path not found for "${movie.title}"`);
     }
-  ];
 
-  const resultPaths = await downloadMovies(moviesToDownload);
+    broadcast({
+      type: 'status',
+      message: `✅ Download complete for "${movie.title}"`,
+    });
 
-  console.log(`✅ Download complete:`, resultPaths);
-
-  const movieFilePath = resultPaths[0]; // Assuming first path is main movie file
-
-  broadcast({ type: 'status', message: `Downloaded: ${movie.title}` });
-
-  return movieFilePath;
+    return contentPath;
+  } catch (err) {
+    console.error(`❌ Error in downloadMovie for "${movie.title}":`, err);
+    broadcast({
+      type: 'status',
+      message: `❌ Download failed for "${movie.title}"`,
+      error: err.message,
+    });
+    throw err; // re-throw so processMovieQueue can handle
+  }
 }
 
 module.exports = { downloadMovie };

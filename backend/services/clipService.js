@@ -1,6 +1,6 @@
 // clipService.js
 
-const { clipMovies } = require('../../clipMovies');
+const { clipMovies } = require('../cli/clipMovies');
 
 async function clipMovie(movie, filePath, broadcast) {
   console.log(`✂️ Clipping real movie: ${movie.title} from ${filePath}`);

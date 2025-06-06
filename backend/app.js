@@ -7,9 +7,11 @@ const clipsRouter = require('./api/clips');
 const scenesRouter = require('./api/scenes');
 const healthRouter = require('./api/health');
 const { createStatusWebSocketServer } = require('./websockets/statusPublisher');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
 
 // Start WebSocket server
 createStatusWebSocketServer(server);

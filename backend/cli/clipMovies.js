@@ -5,7 +5,7 @@ const {
   parseGptScenes,
   findSubtitle,
   clipScene 
-} = require('./utils/sceneHelpers');
+} = require('../../utils/sceneHelpers');
 
 async function clipMovies(moviesInput, options = {}) {
   const { maxScenes, scale, skipChatgpt } = options;

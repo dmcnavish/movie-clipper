@@ -9,5 +9,6 @@ movies/*
 !movies/.gitkeep
 
 .env
+backend/.env
 
 gpt_cache.db
